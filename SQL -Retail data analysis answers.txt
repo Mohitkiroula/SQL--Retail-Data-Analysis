@@ -1,0 +1,166 @@
+--A-1
+
+select count(*) from [dbo].[Customer]
+select count(*) from [dbo].[prod_cat_info] 
+select count(*) from[dbo].[Transactions]
+
+--A-2
+select count([transaction_id]) from Transactions 
+where Qty < 0
+
+--A-3
+select DOB,  try_cast(DOB as date) from [dbo].[Customer]
+
+
+--A-4
+select day([tran_date]) as days, MONTH([tran_date]) as months,YEAR([tran_date]) as years from [dbo].[Transactions]
+
+--A-5
+select [prod_cat] from [dbo].[prod_cat_info]
+where [prod_subcat] ='DIY'
+
+---DATA ANALYSIS
+--A-1
+
+
+select top 1([Store_type]), count([transaction_id]) from [dbo].[Transactions]
+group by  [Store_type]
+order by  count([transaction_id]) desc
+
+--A-2
+
+select top 2 [Gender], count(customer_id) from [dbo].[Customer]
+group by [Gender] 
+order by  count(customer_id) desc
+
+
+--Q-3
+--A-3
+select top 1 [city_code], count(customer_Id) from [dbo].[Customer]
+group by [city_code]
+order by count (customer_Id) desc
+
+
+--Q-4
+--A-4
+select (prod_cat),count(prod_subcat) from [dbo].[prod_cat_info]
+group by [prod_cat]
+having [prod_cat] = 'BOOKS'
+
+--Q-5
+--A-5
+select max([Qty]) from [dbo].[Transactions]
+
+
+--Q-6
+--A-6
+
+select [prod_cat] , SUM ([total_amt])  from [dbo].[Transactions] t
+inner join [dbo].[prod_cat_info] p
+on t.[prod_cat_code] = p.[prod_cat_code]
+where [prod_cat] in ('Electronics' , 'Books')
+group by [prod_cat]
+
+--Q-7
+--A-7
+
+select  ([cust_id]), count([transaction_id]) from [dbo].[Transactions]
+where Qty > 0
+group by [cust_id]
+having count([transaction_id]) >10
+
+--Q-8
+--A-8
+select  [Store_type], [prod_cat]  , SUM ([total_amt])  from [dbo].[Transactions] t
+inner join [dbo].[prod_cat_info] p
+on t.[prod_cat_code] = p.[prod_cat_code]
+where p.[prod_cat] in ('Electronics' , 'Clothing')
+group by [Store_type],[prod_cat]
+having [Store_type] = 'Flagship store'
+
+--Q-9
+--A-9
+select [prod_subcat],sum([total_amt])as revenue from [dbo].[prod_cat_info] p
+inner join [dbo].[Transactions] t
+on t. [prod_subcat_code] =p.prod_sub_cat_code
+inner join [dbo].[Customer] c
+on c.customer_Id = [cust_id]
+where [Gender] = 'M'and [prod_cat]='Electronics'
+group by [prod_subcat]
+
+ 
+--Q-10
+--A-10
+select round((a.total_revenue/(a.total_revenue + b.total_revenue))*100,2) as "sales%",
+round((b.total_revenue / (a.total_revenue+ b.total_revenue)) *100 ,2) as "returnsales%"
+a.prod_subcat
+from (select sum([total_amt]) as "total_revenue" , prod_subcat
+from transactions a
+join prod_cat_info b
+on a.prod_cat_code=b.prod_cat_code
+and a.prod_subcat_code=b.prod_sub_cat_code
+where [total_amt] > 0
+group by [prod_subcat]) a
+join (select sum(ABS([total_amt])) as "total_revenue"
+from [dbo].[Transactions] a
+join [dbo].[prod_cat_info] b
+on a.prod_cat_code=b.prod_cat_code
+and a.prod_subcat_code=b.prod_sub_cat_code
+where [total_amt] < 0
+group by [prod_subcat]) b
+a.[prod_subcat] = b.[prod_subcat];
+
+
+-
+--A-11
+
+select sum([total_amt] from [dbo].[Transactions] a
+join [dbo].[Customer] b
+on a.[cust_id] = b.[customer_Id]
+and datediff(year, DOB, convert(date, getdate ())) >= 25
+and  datediff(year, DOB, convert(date, getdate ())) <=35
+and [tran_date] between dateadd(day, -29 , (select max([tran_date]) from [dbo].[Transactions]))
+and (select max([tran_date]) from [dbo].[Transactions]
+
+
+
+
+--A-12
+
+select top 1 [prod_cat],max(([Qty])) from [dbo].[Transactions]t
+inner join [dbo].[prod_cat_info] p
+on t.prod_cat_code=p.prod_cat_code
+where [tran_date] = DATEADD(month,-3,(select top 1 ([tran_date])  from [dbo].[Transactions]))
+and [Qty]<0
+group by [prod_cat]
+order by max(([Qty])) desc
+
+
+--A-13
+
+select top 1 [Store_type],max([Qty]*[Rate]) as 'sales',max([Qty])  as Quantity from [dbo].[Transactions]
+where [Qty] > 0
+group by[Store_type] 
+order by [Store_type] desc
+
+--A-14
+
+SELECT p.prod_cat, AVG(t.total_amt) AS average 
+FROM (SELECT t.*, AVG(t.total_amt) OVER () as overall_average
+      FROM Transactions T
+     ) t JOIN
+     prod_cat_info P 
+     ON T.prod_cat_code = P.prod_cat_code
+GROUP BY p.prod_cat, overall_average
+HAVING AVG(t.total_amt) > overall_average;
+
+--A-15
+select [prod_subcat] , avg([total_amt]) as average,sum([total_amt])as revenue from [dbo].[prod_cat_info] p
+inner join [dbo].[Transactions] t
+on p.prod_sub_cat_code=t.prod_subcat_code
+where  exists (select top 5 [prod_cat] ,[total_amt] ,sum([Qty]) from [dbo].[Transactions] t 
+inner join [dbo].[prod_cat_info] p
+on t.prod_cat_code=p.prod_cat_code
+group by [prod_cat],[total_amt]
+order by sum([Qty]) desc) 
+group by [prod_subcat]
